@@ -1,136 +1,117 @@
 
 # create a vpc
-resource "aws_vpc" "bianca-vpc" {
-  cidr_block = var.vpc-cidr-block
+resource "aws_vpc" "bianca_vpc" {
+  cidr_block = var.vpc_cidr_block
   tags = {
-    Name = "bianca-vpc"
+    Name = var.bianca_vpc_name
   }
 }
 
-resource "aws_internet_gateway" "bianca-ig" {
-  vpc_id = aws_vpc.bianca-vpc.id
+resource "aws_internet_gateway" "bianca_ig" {
+  vpc_id = aws_vpc.bianca_vpc.id
   tags = {
-    Name = "bianca-internet-gateway"
+    Name = var.bianca_internet_gateway_name
   }
 }
-#create route-table
-resource "aws_route_table" "bianca-route-table" {
-  vpc_id = aws_vpc.bianca-vpc.id
+#create route_table
+resource "aws_route_table" "bianca_route_table" {
+  vpc_id = aws_vpc.bianca_vpc.id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.bianca-ig.id}"
+    gateway_id = aws_internet_gateway.bianca_ig.id
   }
   tags = {
-    Name = "bianca-route-table"
+    Name = var.bianca_route_table_name
   }
 }
-
-# resource "aws_route_table_association" "attach-subnets" {
-
-#     count          = length(var.subnet_cidr)
-#     subnet_id      = element("${aws_subnet.${count.index}.id}" , count.index)
-#     route_table_id = aws_route_table.bianca-route-table.id
-
-# }
-
 
 
 # create public subnets
 
-resource "aws_subnet" "bianca-public-subnet1" {
-  vpc_id     = aws_vpc.bianca-vpc.id
-  cidr_block = var.bianca-public-subnet1
+resource "aws_subnet" "bianca_public_subnet1" {
+  vpc_id     = aws_vpc.bianca_vpc.id
+  cidr_block = var.bianca_public_subnet1
   tags = {
-    Name = "bianca-public-subnet-1"
+    Name = var.bianca_public_subnet1_name
   }
 }
 
-resource "aws_subnet" "bianca-public-subnet2" {
-  vpc_id     = aws_vpc.bianca-vpc.id
-  cidr_block = var.bianca-public-subnet2
+resource "aws_subnet" "bianca_public_subnet2" {
+  vpc_id     = aws_vpc.bianca_vpc.id
+  cidr_block = var.bianca_public_subnet2
   tags = {
-    Name = "bianca-public-subnet-2"
-  }
-}
-resource "aws_subnet" "bianca-private-subnet1" {
-  vpc_id     = aws_vpc.bianca-vpc.id
-  cidr_block = var.bianca-private-subnet1
-  tags = {
-    Name = "bianca-private-subnet-1"
+    Name = var.bianca_public_subnet2_name
   }
 }
 
-resource "aws_subnet" "bianca-private-subnet2" {
-  vpc_id     = aws_vpc.bianca-vpc.id
-  cidr_block = var.bianca-private-subnet2
+#create private subnets
+resource "aws_subnet" "bianca_private_subnet1" {
+  vpc_id     = aws_vpc.bianca_vpc.id
+  cidr_block = var.bianca_private_subnet1
   tags = {
-    Name = "bianca-private-subnet-2"
+    Name = var.bianca_private_subnet1_name
   }
 }
 
-resource "aws_route_table_association" "attach-subnets-public1" {
+resource "aws_subnet" "bianca_private_subnet2" {
+  vpc_id     = aws_vpc.bianca_vpc.id
+  cidr_block = var.bianca_private_subnet2
+  tags = {
+    Name = var.bianca_private_subnet2_name
+  }
+}
 
-  subnet_id      = aws_subnet.bianca-public-subnet1.id
-  route_table_id = aws_route_table.bianca-route-table.id
+#create route tables
+resource "aws_route_table_association" "attach_subnets_public1" {
+
+  subnet_id      = aws_subnet.bianca_public_subnet1.id
+  route_table_id = aws_route_table.bianca_route_table.id
 
 }
 
-resource "aws_route_table_association" "attach-subnets-public2" {
+resource "aws_route_table_association" "attach_subnets_public2" {
 
-  subnet_id      = aws_subnet.bianca-public-subnet2.id
-  route_table_id = aws_route_table.bianca-route-table.id
-
-}
-
-resource "aws_route_table_association" "attach-subnets-private1" {
-
-  subnet_id      = aws_subnet.bianca-private-subnet1.id
-  route_table_id = aws_route_table.bianca-route-table.id
+  subnet_id      = aws_subnet.bianca_public_subnet2.id
+  route_table_id = aws_route_table.bianca_route_table.id
 
 }
 
-resource "aws_route_table_association" "attach-subnets-private2" {
-
-  subnet_id      = aws_subnet.bianca-private-subnet2.id
-  route_table_id = aws_route_table.bianca-route-table.id
-
-}
-
+#function to get ip
 data "http" "myip" {
   url = "http://ipv4.icanhazip.com"
 }
 
-resource "aws_security_group" "bianca-sg1" {
-  vpc_id = aws_vpc.bianca-vpc.id
+#create security groups
+resource "aws_security_group" "bianca_public_security_group" {
+  vpc_id = aws_vpc.bianca_vpc.id
   ingress {
     from_port   = 22
     to_port     = 22
-    protocol    = "tcp"
+    protocol    = var.protocol
     cidr_blocks = ["${chomp(data.http.myip.body)}/32"]
   }
   ingress {
     from_port        = 80
     to_port          = 80
-    protocol         = "tcp"
+    protocol         = var.protocol
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
   tags = {
-    Name = "bianca-security-group-public"
+    Name = var.bianca_public_security_group_name
   }
 }
 
-resource "aws_security_group" "bianca-sg2" {
-  vpc_id = aws_vpc.bianca-vpc.id
+resource "aws_security_group" "bianca_private_security_group" {
+  vpc_id = aws_vpc.bianca_vpc.id
   ingress {
     from_port   = 22
     to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.2.0/24"]
-    #cidr_blocks = ["${aws_instance.bianca-instance2.private_ip}"]
+    protocol    = var.protocol
+    cidr_blocks = ["${aws_instance.bianca_instance2.private_ip}/32"]
   }
   tags = {
-    Name = "bianca-security-group-private"
+    Name = var.bianca_private_security_group_name
   }
 
 }
@@ -138,36 +119,41 @@ resource "aws_security_group" "bianca-sg2" {
 
 
 #create instance
-resource "aws_instance" "bianca-instance1" {
-  ami                         = var.ami-value
-  instance_type               = var.ec2-instance-type1
-  subnet_id                   = aws_subnet.bianca-public-subnet1.id
+resource "aws_instance" "bianca_instance1" {
+  ami                         = var.ami_value
+  instance_type               = var.ec2_instance_type1
+  subnet_id                   = aws_subnet.bianca_public_subnet1.id
   associate_public_ip_address = "true"
-  vpc_security_group_ids      = [aws_security_group.bianca-sg1.id]
+  vpc_security_group_ids      = [aws_security_group.bianca_public_security_group.id]
+  key_name                    = "aws_key"
   tags = {
-    Name = "bianca-ec2-instante-public-1"
+    Name = var.bianca_instance1_name
   }
 }
 
-resource "aws_instance" "bianca-instance2" {
-  ami                         = var.ami-value
-  instance_type               = var.ec2-instance-type1
-  subnet_id                   = aws_subnet.bianca-public-subnet2.id
+resource "aws_instance" "bianca_instance2" {
+  ami                         = var.ami_value
+  instance_type               = var.ec2_instance_type1
+  subnet_id                   = aws_subnet.bianca_public_subnet2.id
   associate_public_ip_address = "true"
-  vpc_security_group_ids      = [aws_security_group.bianca-sg1.id]
+  vpc_security_group_ids      = [aws_security_group.bianca_public_security_group.id]
+  key_name                    = "aws_key"
+
   tags = {
-    Name = "bianca-ec2-instante-public-2"
+    Name = var.bianca_instance2_name
   }
 
 }
 
-resource "aws_instance" "bianca-instance3" {
-  ami                    = var.ami-value
-  instance_type          = var.ec2-instance-type1
-  subnet_id              = aws_subnet.bianca-private-subnet1.id
-  vpc_security_group_ids = [aws_security_group.bianca-sg2.id]
+resource "aws_instance" "bianca_instance3" {
+  ami                    = var.ami_value
+  instance_type          = var.ec2_instance_type1
+  subnet_id              = aws_subnet.bianca_private_subnet1.id
+  vpc_security_group_ids = [aws_security_group.bianca_private_security_group.id]
+  key_name               = "aws_key"
+
   tags = {
-    Name = "bianca-ec2-instante-private-1"
+    Name = var.bianca_instance3_name
   }
 }
 
